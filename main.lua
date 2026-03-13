@@ -120,26 +120,20 @@ function getClosestEnemy()
 	for _,v in pairs(players:GetPlayers()) do
 		
 		if v ~= player
+		and v.Team ~= player.Team
 		and v.Character
 		and v.Character:FindFirstChild("Head")
-		and v.Character:FindFirstChild("HumanoidRootPart")
-		and v.Character:FindFirstChildOfClass("Humanoid") then
+		and v.Character:FindFirstChild("HumanoidRootPart") then
 			
-			local humanoid = v.Character:FindFirstChildOfClass("Humanoid")
+			local head = v.Character.Head
 			
-			if humanoid.Health > 0 then
+			if canSeeTarget(head) then
 				
-				local head = v.Character.Head
+				local distance = (head.Position - myPos).Magnitude
 				
-				if canSeeTarget(head) then
-					
-					local distance = (head.Position - myPos).Magnitude
-					
-					if distance < shortestDistance then
-						shortestDistance = distance
-						closest = v
-					end
-					
+				if distance < shortestDistance then
+					shortestDistance = distance
+					closest = v
 				end
 				
 			end
@@ -199,8 +193,7 @@ runService.RenderStepped:Connect(function()
 			local head = target.Character:FindFirstChild("Head")
 			
 			if head then
-				local targetCF = CFrame.new(camera.CFrame.Position, head.Position)
-camera.CFrame = camera.CFrame:Lerp(targetCF, 0.2)
+				camera.CFrame = CFrame.new(camera.CFrame.Position, head.Position)
 			end
 			
 		end
