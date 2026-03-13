@@ -199,7 +199,8 @@ runService.RenderStepped:Connect(function()
 			local head = target.Character:FindFirstChild("Head")
 			
 			if head then
-				camera.CFrame = CFrame.new(camera.CFrame.Position, head.Position)
+				local targetCF = CFrame.new(camera.CFrame.Position, head.Position)
+camera.CFrame = camera.CFrame:Lerp(targetCF, 0.2)
 			end
 			
 		end
