@@ -120,20 +120,26 @@ function getClosestEnemy()
 	for _,v in pairs(players:GetPlayers()) do
 		
 		if v ~= player
-		and v.Team ~= player.Team
 		and v.Character
 		and v.Character:FindFirstChild("Head")
-		and v.Character:FindFirstChild("HumanoidRootPart") then
+		and v.Character:FindFirstChild("HumanoidRootPart")
+		and v.Character:FindFirstChildOfClass("Humanoid") then
 			
-			local head = v.Character.Head
+			local humanoid = v.Character:FindFirstChildOfClass("Humanoid")
 			
-			if canSeeTarget(head) then
+			if humanoid.Health > 0 then
 				
-				local distance = (head.Position - myPos).Magnitude
+				local head = v.Character.Head
 				
-				if distance < shortestDistance then
-					shortestDistance = distance
-					closest = v
+				if canSeeTarget(head) then
+					
+					local distance = (head.Position - myPos).Magnitude
+					
+					if distance < shortestDistance then
+						shortestDistance = distance
+						closest = v
+					end
+					
 				end
 				
 			end
