@@ -4,7 +4,6 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
--- Warten bis Character geladen ist
 local function getCharacter()
 	return player.Character or player.CharacterAdded:Wait()
 end
@@ -58,7 +57,7 @@ espBtn.MouseButton1Click:Connect(function()
 	espBtn.Text = espEnabled and "ESP ON" or "ESP OFF"
 end)
 
--- WALL CHECK (FIXED)
+-- WALL CHECK
 local function canSee(targetPart)
 	local char = getCharacter()
 	if not char then return false end
@@ -79,7 +78,7 @@ local function canSee(targetPart)
 	return true
 end
 
--- TARGET SYSTEM (SCREEN + TEAM + WALL)
+-- TARGET SYSTEM
 local function getBestTarget()
 	local char = getCharacter()
 	local hrp = char:FindFirstChild("HumanoidRootPart")
@@ -126,28 +125,60 @@ local function getBestTarget()
 	return bestTarget
 end
 
--- ESP (FIXED)
+-- ESP SYSTEM (mit Health + Name)
 local function updateESP()
 	for _,v in pairs(Players:GetPlayers()) do
 		
 		if v ~= player and v.Character then
 			
-			local highlight = v.Character:FindFirstChild("ESP_HIGHLIGHT")
+			local char = v.Character
+			local humanoid = char:FindFirstChild("Humanoid")
+			local head = char:FindFirstChild("Head")
+			
+			if not humanoid or not head then continue end
+			
+			local highlight = char:FindFirstChild("ESP_HIGHLIGHT")
+			local billboard = char:FindFirstChild("ESP_UI")
 			
 			if espEnabled and v.Team ~= player.Team then
 				
+				-- Highlight
 				if not highlight then
 					highlight = Instance.new("Highlight")
 					highlight.Name = "ESP_HIGHLIGHT"
 					highlight.FillColor = Color3.fromRGB(255,0,0)
 					highlight.OutlineColor = Color3.new(1,1,1)
-					highlight.Parent = v.Character
+					highlight.Parent = char
+				end
+				
+				-- Billboard GUI (Name + Health)
+				if not billboard then
+					billboard = Instance.new("BillboardGui")
+					billboard.Name = "ESP_UI"
+					billboard.Size = UDim2.new(0,100,0,40)
+					billboard.StudsOffset = Vector3.new(0,2.5,0)
+					billboard.AlwaysOnTop = true
+					billboard.Parent = head
+					
+					local text = Instance.new("TextLabel")
+					text.Size = UDim2.new(1,0,1,0)
+					text.BackgroundTransparency = 1
+					text.TextColor3 = Color3.new(1,1,1)
+					text.TextStrokeTransparency = 0
+					text.Parent = billboard
+				end
+				
+				-- Update Text
+				local text = billboard:FindFirstChildOfClass("TextLabel")
+				if text then
+					text.Text = v.Name .. "\nHP: " .. math.floor(humanoid.Health)
 				end
 				
 			else
-				if highlight then
-					highlight:Destroy()
-				end
+				
+				if highlight then highlight:Destroy() end
+				if billboard then billboard:Destroy() end
+				
 			end
 			
 		end
