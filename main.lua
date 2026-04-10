@@ -6,10 +6,6 @@ local camera = workspace.CurrentCamera
 local aimbotEnabled = true
 local espEnabled = true
 
--- SETTINGS
-local maxDistance = 300
-local maxFOV = 200 -- kleiner = stärkerer Fokus auf Mitte
-
 -- GUI
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
@@ -53,24 +49,44 @@ espButton.BackgroundColor3 = Color3.fromRGB(50,50,50)
 espButton.TextColor3 = Color3.new(1,1,1)
 espButton.Parent = frame
 
+-- Menü öffnen
 openButton.MouseButton1Click:Connect(function()
 	frame.Visible = not frame.Visible
 end)
 
+-- Aimbot Toggle
 aimbotButton.MouseButton1Click:Connect(function()
+
 	aimbotEnabled = not aimbotEnabled
-	aimbotButton.Text = aimbotEnabled and "Aimbot ON" or "Aimbot OFF"
+	
+	if aimbotEnabled then
+		aimbotButton.Text = "Aimbot ON"
+	else
+		aimbotButton.Text = "Aimbot OFF"
+	end
+	
 end)
 
+-- ESP Toggle
 espButton.MouseButton1Click:Connect(function()
+
 	espEnabled = not espEnabled
-	espButton.Text = espEnabled and "ESP ON" or "ESP OFF"
+	
+	if espEnabled then
+		espButton.Text = "ESP ON"
+	else
+		espButton.Text = "ESP OFF"
+	end
+	
 end)
 
--- WALL CHECK
-function canSee(target)
+-- Sichtprüfung (Wall Check)
+function canSeeTarget(targetPart)
+
+	if not player.Character then return false end
+	
 	local origin = camera.CFrame.Position
-	local direction = (target.Position - origin)
+	local direction = (targetPart.Position - origin)
 
 	local params = RaycastParams.new()
 	params.FilterDescendantsInstances = {player.Character}
@@ -79,52 +95,45 @@ function canSee(target)
 	local result = workspace:Raycast(origin, direction, params)
 
 	if result then
-		return result.Instance:IsDescendantOf(target.Parent)
+		if result.Instance:IsDescendantOf(targetPart.Parent) then
+			return true
+		else
+			return false
+		end
 	end
 
 	return true
 end
 
--- SCREEN CHECK + BEST TARGET
-function getBestTarget()
+-- nächsten sichtbaren Gegner finden
+function getClosestEnemy()
 
-	local bestTarget = nil
-	local shortest = math.huge
+	local closest = nil
+	local shortestDistance = math.huge
 	
 	if not player.Character or not player.Character:FindFirstChild("HumanoidRootPart") then
 		return nil
 	end
 	
-	local screenCenter = Vector2.new(camera.ViewportSize.X/2, camera.ViewportSize.Y/2)
-
+	local myPos = player.Character.HumanoidRootPart.Position
+	
 	for _,v in pairs(players:GetPlayers()) do
 		
 		if v ~= player
 		and v.Team ~= player.Team
 		and v.Character
-		and v.Character:FindFirstChild("Head") then
+		and v.Character:FindFirstChild("Head")
+		and v.Character:FindFirstChild("HumanoidRootPart") then
 			
 			local head = v.Character.Head
 			
-			-- auf Bildschirm projizieren
-			local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
-			
-			if onScreen then
+			if canSeeTarget(head) then
 				
-				local screenPoint = Vector2.new(screenPos.X, screenPos.Y)
-				local distanceFromCenter = (screenPoint - screenCenter).Magnitude
+				local distance = (head.Position - myPos).Magnitude
 				
-				if distanceFromCenter < maxFOV then
-					
-					if canSee(head) then
-						
-						if distanceFromCenter < shortest then
-							shortest = distanceFromCenter
-							bestTarget = v
-						end
-						
-					end
-					
+				if distance < shortestDistance then
+					shortestDistance = distance
+					closest = v
 				end
 				
 			end
@@ -133,12 +142,13 @@ function getBestTarget()
 		
 	end
 	
-	return bestTarget
+	return closest
 	
 end
 
 -- ESP
 function updateESP()
+
 	for _,v in pairs(players:GetPlayers()) do
 		
 		if v ~= player and v.Character then
@@ -164,17 +174,19 @@ function updateESP()
 			end
 			
 		end
+		
 	end
+	
 end
 
--- LOOP
+-- Hauptloop
 runService.RenderStepped:Connect(function()
 
 	updateESP()
 
 	if aimbotEnabled then
 		
-		local target = getBestTarget()
+		local target = getClosestEnemy()
 		
 		if target and target.Character then
 			
