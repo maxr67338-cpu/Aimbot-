@@ -15,7 +15,7 @@ local correctKey = "Finnistcool332"
 
 -- AIMBOT EINSTELLUNGEN
 local maxFOV = 250         -- Sichtfeld-Radius für den Aimbot
-local aimSmoothing = 0.4   -- 0.15 = Sehr flüssig und weich, 1.0 = Sofortiger Snap
+local aimSmoothing = 0.9   -- 0.15 = Sehr flüssig und weich, 1.0 = Sofortiger Snap
 
 -- MAIN GUI CONTAINER
 local gui = Instance.new("ScreenGui")
