@@ -11,7 +11,7 @@ end
 local aimbotEnabled = false -- Startet auf false, bis Key korrekt ist
 local espEnabled = false    -- Startet auf false, bis Key korrekt ist
 local keyVerified = false   -- Status für das Key-System
-local correctKey = "Maxistcool33" -- Der verlangte Key
+local correctKey = "Finnistcool332" -- Der verlangte Key
 
 local maxFOV = 200
 
@@ -19,16 +19,18 @@ local maxFOV = 200
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Name = "CustomMenuGui"
+gui.DisplayOrder = 999999999 -- Schiebt das gesamte GUI über alle anderen
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global -- Ermöglicht die korrekte Nutzung riesiger ZIndex-Werte
 gui.Parent = player:WaitForChild("PlayerGui")
 
------------------------------------------------------------------
--- KEY SYSTEM GUI (Öffnet sich zuerst)
+----------------------------------------------------------------
+-- KEY SYSTEM GUI (Hervorgehoben ganz oben)
 ----------------------------------------------------------------
 local keyFrame = Instance.new("Frame")
 keyFrame.Size = UDim2.new(0, 300, 0, 150)
 keyFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
 keyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-keyFrame.ZIndex = 100000000 -- REPARIERT: Maximaler ZIndex im globalen Raum
+keyFrame.ZIndex = 100000000 -- Absolutes Maximum
 keyFrame.Parent = gui
 
 local keyTitle = Instance.new("TextLabel")
@@ -37,7 +39,7 @@ keyTitle.Position = UDim2.new(0, 0, 0, 10)
 keyTitle.Text = "Bitte Key eingeben:"
 keyTitle.TextColor3 = Color3.new(1, 1, 1)
 keyTitle.BackgroundTransparency = 1
-keyTitle.ZIndex = 100000001 -- Liegt direkt über dem keyFrame
+keyTitle.ZIndex = 100000001
 keyTitle.Parent = keyFrame
 
 local keyInput = Instance.new("TextBox")
@@ -47,7 +49,7 @@ keyInput.PlaceholderText = "Hier Key einfügen..."
 keyInput.Text = ""
 keyInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 keyInput.TextColor3 = Color3.new(1, 1, 1)
-keyInput.ZIndex = 100000001 -- Liegt direkt über dem keyFrame
+keyInput.ZIndex = 100000001
 keyInput.Parent = keyFrame
 
 local keySubmit = Instance.new("TextButton")
@@ -56,8 +58,9 @@ keySubmit.Position = UDim2.new(0, 20, 0, 95)
 keySubmit.Text = "Überprüfen"
 keySubmit.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 keySubmit.TextColor3 = Color3.new(1, 1, 1)
-keySubmit.ZIndex = 100000001 -- Liegt direkt über dem keyFrame
+keySubmit.ZIndex = 100000001
 keySubmit.Parent = keyFrame
+
 ----------------------------------------------------------------
 -- CHEAT MENU GUI (Bleibt unsichtbar bis Key korrekt)
 ----------------------------------------------------------------
@@ -66,7 +69,7 @@ openButton.Size = UDim2.new(0, 120, 0, 40)
 openButton.Position = UDim2.new(0, 20, 0, 20)
 openButton.Text = "MENU"
 openButton.ZIndex = 5
-openButton.Visible = false -- Unsichtbar am Anfang
+openButton.Visible = false
 openButton.Parent = gui
 
 local frame = Instance.new("Frame")
@@ -95,19 +98,16 @@ espBtn.Parent = frame
 -- INTERAKTIONEN & LOGIK
 ----------------------------------------------------------------
 
--- Key Überprüfung
 keySubmit.Activated:Connect(function()
 	if keyInput.Text == correctKey then
 		keyVerified = true
-		keyFrame:Destroy() -- Löscht das Key-Fenster komplett
+		keyFrame:Destroy()
 		
-		-- Schaltet die Funktionen frei
 		aimbotEnabled = true
 		espEnabled = true
 		aimbotBtn.Text = "Aimbot ON"
 		espBtn.Text = "ESP ON"
 		
-		-- Macht den Menü-Button sichtbar
 		openButton.Visible = true
 	else
 		keyInput.Text = ""
@@ -115,7 +115,6 @@ keySubmit.Activated:Connect(function()
 	end
 end)
 
--- Menü öffnen/schließen
 openButton.Activated:Connect(function()
 	if keyVerified then
 		frame.Visible = not frame.Visible
@@ -202,7 +201,6 @@ local function updateESP()
 			local billboard = char:FindFirstChild("ESP_UI")
 			
 			if espEnabled and v.Team ~= player.Team and keyVerified then
-				-- Highlight
 				if not highlight then
 					highlight = Instance.new("Highlight")
 					highlight.Name = "ESP_HIGHLIGHT"
@@ -211,7 +209,6 @@ local function updateESP()
 					highlight.Parent = char
 				end
 				
-				-- Billboard GUI
 				if not billboard then
 					billboard = Instance.new("BillboardGui")
 					billboard.Name = "ESP_UI"
@@ -242,18 +239,19 @@ end
 
 -- MAIN LOOP
 RunService.RenderStepped:Connect(function()
-	-- Führt Aimbot und ESP nur aus, wenn der Key verifiziert wurde
 	if not keyVerified then return end
 
 	updateESP()
 
-	if not aimbotEnabled then return end
-
-	local target = getBestTarget()
-	if target and target.Character then
-		local head = target.Character:FindFirstChild("Head")
-		if head then
-			camera.CFrame = CFrame.new(camera.CFrame.Position, head.Position)
+	-- REPARIERT: Zuverlässige CFrame-Berechnung für den Aimbot
+	if aimbotEnabled then
+		local target = getBestTarget()
+		if target and target.Character then
+			local head = target.Character:FindFirstChild("Head")
+			if head then
+				-- Nutzt CFrame.lookAt, um die Kamera ruckelfrei direkt auf den Kopf auszurichten
+				camera.CFrame = CFrame.lookAt(camera.CFrame.Position, head.Position)
+			end
 		end
 	end
 end)
