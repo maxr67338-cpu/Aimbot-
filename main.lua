@@ -1,6 +1,5 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService") -- Für geschmeidige Übergänge
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -14,9 +13,9 @@ local espEnabled = false    -- Startet auf false, bis Key korrekt ist
 local keyVerified = false   -- Status für das Key-System
 local correctKey = "Finnistcool332"
 
--- AIMBOT EINSTELLUNGEN (Hier kannst du feintunen!)
+-- AIMBOT EINSTELLUNGEN
 local maxFOV = 250         -- Sichtfeld-Radius für den Aimbot
-local aimSmoothing = 0.15   -- Niedriger = Schneller/Härter, Höher = Weicher/Unauffälliger (0.15 ist perfekt)
+local aimSmoothing = 0.15   -- 0.15 = Sehr flüssig und weich, 1.0 = Sofortiger Snap
 
 -- MAIN GUI CONTAINER
 local gui = Instance.new("ScreenGui")
@@ -98,7 +97,7 @@ espBtn.ZIndex = 5
 espBtn.Parent = frame
 
 ----------------------------------------------------------------
--- KONTROLLEN & LOGIK
+-- KONTROLLEN & AKTIONEN
 ----------------------------------------------------------------
 
 keySubmit.MouseButton1Click:Connect(function()
@@ -136,28 +135,38 @@ espBtn.MouseButton1Click:Connect(function()
 	espBtn.Text = espEnabled and "ESP ON" or "ESP OFF"
 end)
 
--- WALL CHECK
+-- REPARIERT & MODERNISIERT: Absolut sicherer Wand-Check
 local function canSee(targetPart)
 	local char = getCharacter()
 	if not char then return false end
 
 	local origin = camera.CFrame.Position
+	-- Richtungvektor von Kamera zum gegnerischen Kopf
 	local direction = (targetPart.Position - origin)
 
 	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Blacklist
-	params.FilterDescendantsInstances = {char}
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	-- Ignoriert deinen eigenen Charakter, damit du nicht deine eigene Sicht blockierst
+	params.FilterDescendantsInstances = {char, camera} 
+	params.IgnoreWater = true
 
 	local result = workspace:Raycast(origin, direction, params)
 
-	if result then
-		return result.Instance:IsDescendantOf(targetPart.Parent)
+	-- Wenn der Strahl nichts trifft, ist die Sicht frei
+	if not result then
+		return true
 	end
 
-	return true
+	-- Wenn er etwas trifft, prüfen wir, ob es zum Gegner gehört (z.B. dessen Hut oder Haare)
+	if result.Instance:IsDescendantOf(targetPart.Parent) then
+		return true
+	end
+
+	-- Ein Objekt (Wand, Boden) steht dazwischen
+	return false
 end
 
--- NEUER & VERBESSERTER TARGET SYSTEM
+-- TARGET SYSTEM
 local function getBestTarget()
 	local char = getCharacter()
 	if not char then return nil end
@@ -167,23 +176,26 @@ local function getBestTarget()
 	local shortestDistance = math.huge
 
 	for _, v in pairs(Players:GetPlayers()) do
-		if v ~= player and v.Team ~= player.Team and v.Character then
+		-- FILTER: Nicht man selbst UND anderes Team (oder andere Teamfarbe bei FFA)
+		if v ~= player and (v.Team ~= player.Team or v.TeamColor ~= player.TeamColor) and v.Character then
 			local tChar = v.Character
 			local head = tChar:FindFirstChild("Head")
 			local humanoid = tChar:FindFirstChild("Humanoid")
 			
-			-- Prüft, ob der Gegner lebt und einen Kopf hat
+			-- Gegner muss leben und einen Kopf besitzen
 			if head and humanoid and humanoid.Health > 0 then
 				local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
 				
 				if onScreen then
 					local distToCenter = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
 					
-					-- Prüft FOV-Radius und ob der Gegner hinter einer Wand steht
-					if distToCenter < maxFOV and canSee(head) then
-						if distToCenter < shortestDistance then
-							shortestDistance = distToCenter
-							bestTarget = head -- Gibt direkt das Zielteil (Kopf) zurück
+					-- FOV-Check & Wand-Check nacheinander
+					if distToCenter < maxFOV then
+						if canSee(head) then
+							if distToCenter < shortestDistance then
+								shortestDistance = distToCenter
+								bestTarget = head
+							end
 						end
 					end
 				end
@@ -207,7 +219,7 @@ local function updateESP()
 			local highlight = char:FindFirstChild("ESP_HIGHLIGHT")
 			local billboard = char:FindFirstChild("ESP_UI")
 			
-			if espEnabled and v.Team ~= player.Team and keyVerified then
+			if espEnabled and (v.Team ~= player.Team or v.TeamColor ~= player.TeamColor) and keyVerified then
 				if not highlight then
 					highlight = Instance.new("Highlight")
 					highlight.Name = "ESP_HIGHLIGHT"
@@ -254,8 +266,7 @@ RunService.RenderStepped:Connect(function()
 
 	local targetHead = getBestTarget()
 	if targetHead then
-		-- ERSTKLASSIGE AIMBOT-BERECHNUNG (Interpolation / Smoothing)
-		-- Berechnet die Zielrotation flüssig basierend auf der aktuellen Kameraposition
+		-- Smooth Aim Berechnung zur Kameraposition des Ziels
 		local targetCFrame = CFrame.new(camera.CFrame.Position, targetHead.Position)
 		camera.CFrame = camera.CFrame:Lerp(targetCFrame, aimSmoothing)
 	end
