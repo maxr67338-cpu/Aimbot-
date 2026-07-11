@@ -21,14 +21,14 @@ gui.ResetOnSpawn = false
 gui.Name = "CustomMenuGui"
 gui.Parent = player:WaitForChild("PlayerGui")
 
-----------------------------------------------------------------
+-----------------------------------------------------------------
 -- KEY SYSTEM GUI (Öffnet sich zuerst)
 ----------------------------------------------------------------
 local keyFrame = Instance.new("Frame")
 keyFrame.Size = UDim2.new(0, 300, 0, 150)
 keyFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
 keyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-keyFrame.ZIndex = 10
+keyFrame.ZIndex = 100000000 -- REPARIERT: Maximaler ZIndex im globalen Raum
 keyFrame.Parent = gui
 
 local keyTitle = Instance.new("TextLabel")
@@ -37,7 +37,7 @@ keyTitle.Position = UDim2.new(0, 0, 0, 10)
 keyTitle.Text = "Bitte Key eingeben:"
 keyTitle.TextColor3 = Color3.new(1, 1, 1)
 keyTitle.BackgroundTransparency = 1
-keyTitle.ZIndex = 11
+keyTitle.ZIndex = 100000001 -- Liegt direkt über dem keyFrame
 keyTitle.Parent = keyFrame
 
 local keyInput = Instance.new("TextBox")
@@ -47,7 +47,7 @@ keyInput.PlaceholderText = "Hier Key einfügen..."
 keyInput.Text = ""
 keyInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
 keyInput.TextColor3 = Color3.new(1, 1, 1)
-keyInput.ZIndex = 11
+keyInput.ZIndex = 100000001 -- Liegt direkt über dem keyFrame
 keyInput.Parent = keyFrame
 
 local keySubmit = Instance.new("TextButton")
@@ -56,9 +56,8 @@ keySubmit.Position = UDim2.new(0, 20, 0, 95)
 keySubmit.Text = "Überprüfen"
 keySubmit.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
 keySubmit.TextColor3 = Color3.new(1, 1, 1)
-keySubmit.ZIndex = 11
+keySubmit.ZIndex = 100000001 -- Liegt direkt über dem keyFrame
 keySubmit.Parent = keyFrame
-
 ----------------------------------------------------------------
 -- CHEAT MENU GUI (Bleibt unsichtbar bis Key korrekt)
 ----------------------------------------------------------------
