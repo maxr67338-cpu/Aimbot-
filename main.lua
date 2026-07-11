@@ -4,27 +4,70 @@ local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
 
--- REPARIERT: Kein ":Wait()" mehr in der Schleife, um Freezes beim Respawn zu verhindern
 local function getCharacter()
 	return player.Character
 end
 
-local aimbotEnabled = true
-local espEnabled = true
+local aimbotEnabled = false -- Startet auf false, bis Key korrekt ist
+local espEnabled = false    -- Startet auf false, bis Key korrekt ist
+local keyVerified = false   -- Status für das Key-System
+local correctKey = "Maxistcool33" -- Der verlangte Key
 
 local maxFOV = 200
 
--- GUI
+-- MAIN GUI CONTAINER
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Name = "CustomMenuGui"
 gui.Parent = player:WaitForChild("PlayerGui")
 
+----------------------------------------------------------------
+-- KEY SYSTEM GUI (Öffnet sich zuerst)
+----------------------------------------------------------------
+local keyFrame = Instance.new("Frame")
+keyFrame.Size = UDim2.new(0, 300, 0, 150)
+keyFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
+keyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+keyFrame.ZIndex = 10
+keyFrame.Parent = gui
+
+local keyTitle = Instance.new("TextLabel")
+keyTitle.Size = UDim2.new(1, 0, 0, 30)
+keyTitle.Position = UDim2.new(0, 0, 0, 10)
+keyTitle.Text = "Bitte Key eingeben:"
+keyTitle.TextColor3 = Color3.new(1, 1, 1)
+keyTitle.BackgroundTransparency = 1
+keyTitle.ZIndex = 11
+keyTitle.Parent = keyFrame
+
+local keyInput = Instance.new("TextBox")
+keyInput.Size = UDim2.new(1, -40, 0, 35)
+keyInput.Position = UDim2.new(0, 20, 0, 50)
+keyInput.PlaceholderText = "Hier Key einfügen..."
+keyInput.Text = ""
+keyInput.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+keyInput.TextColor3 = Color3.new(1, 1, 1)
+keyInput.ZIndex = 11
+keyInput.Parent = keyFrame
+
+local keySubmit = Instance.new("TextButton")
+keySubmit.Size = UDim2.new(1, -40, 0, 35)
+keySubmit.Position = UDim2.new(0, 20, 0, 95)
+keySubmit.Text = "Überprüfen"
+keySubmit.BackgroundColor3 = Color3.fromRGB(0, 120, 255)
+keySubmit.TextColor3 = Color3.new(1, 1, 1)
+keySubmit.ZIndex = 11
+keySubmit.Parent = keyFrame
+
+----------------------------------------------------------------
+-- CHEAT MENU GUI (Bleibt unsichtbar bis Key korrekt)
+----------------------------------------------------------------
 local openButton = Instance.new("TextButton")
 openButton.Size = UDim2.new(0, 120, 0, 40)
 openButton.Position = UDim2.new(0, 20, 0, 20)
 openButton.Text = "MENU"
-openButton.ZIndex = 5 -- Erhöht, damit der Button immer oben liegt
+openButton.ZIndex = 5
+openButton.Visible = false -- Unsichtbar am Anfang
 openButton.Parent = gui
 
 local frame = Instance.new("Frame")
@@ -38,28 +81,56 @@ frame.Parent = gui
 local aimbotBtn = Instance.new("TextButton")
 aimbotBtn.Size = UDim2.new(1, -20, 0, 40)
 aimbotBtn.Position = UDim2.new(0, 10, 0, 20)
-aimbotBtn.Text = "Aimbot ON"
+aimbotBtn.Text = "Aimbot OFF"
 aimbotBtn.ZIndex = 5
 aimbotBtn.Parent = frame
 
 local espBtn = Instance.new("TextButton")
 espBtn.Size = UDim2.new(1, -20, 0, 40)
 espBtn.Position = UDim2.new(0, 10, 0, 80)
-espBtn.Text = "ESP ON"
+espBtn.Text = "ESP OFF"
 espBtn.ZIndex = 5
 espBtn.Parent = frame
 
--- REPARIERT: .Activated anstelle von .MouseButton1Click für bessere Stabilität
+----------------------------------------------------------------
+-- INTERAKTIONEN & LOGIK
+----------------------------------------------------------------
+
+-- Key Überprüfung
+keySubmit.Activated:Connect(function()
+	if keyInput.Text == correctKey then
+		keyVerified = true
+		keyFrame:Destroy() -- Löscht das Key-Fenster komplett
+		
+		-- Schaltet die Funktionen frei
+		aimbotEnabled = true
+		espEnabled = true
+		aimbotBtn.Text = "Aimbot ON"
+		espBtn.Text = "ESP ON"
+		
+		-- Macht den Menü-Button sichtbar
+		openButton.Visible = true
+	else
+		keyInput.Text = ""
+		keyInput.PlaceholderText = "Falscher Key! Erneut versuchen."
+	end
+end)
+
+-- Menü öffnen/schließen
 openButton.Activated:Connect(function()
-	frame.Visible = not frame.Visible
+	if keyVerified then
+		frame.Visible = not frame.Visible
+	end
 end)
 
 aimbotBtn.Activated:Connect(function()
+	if not keyVerified then return end
 	aimbotEnabled = not aimbotEnabled
 	aimbotBtn.Text = aimbotEnabled and "Aimbot ON" or "Aimbot OFF"
 end)
 
 espBtn.Activated:Connect(function()
+	if not keyVerified then return end
 	espEnabled = not espEnabled
 	espBtn.Text = espEnabled and "ESP ON" or "ESP OFF"
 end)
@@ -73,7 +144,7 @@ local function canSee(targetPart)
 	local direction = (targetPart.Position - origin)
 
 	local params = RaycastParams.new()
-	params.FilterType = Enum.RaycastFilterType.Exclude -- Modernisiert (Blacklist ist veraltet)
+	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = {char}
 
 	local result = workspace:Raycast(origin, direction, params)
@@ -131,7 +202,7 @@ local function updateESP()
 			local highlight = char:FindFirstChild("ESP_HIGHLIGHT")
 			local billboard = char:FindFirstChild("ESP_UI")
 			
-			if espEnabled and v.Team ~= player.Team then
+			if espEnabled and v.Team ~= player.Team and keyVerified then
 				-- Highlight
 				if not highlight then
 					highlight = Instance.new("Highlight")
@@ -172,6 +243,9 @@ end
 
 -- MAIN LOOP
 RunService.RenderStepped:Connect(function()
+	-- Führt Aimbot und ESP nur aus, wenn der Key verifiziert wurde
+	if not keyVerified then return end
+
 	updateESP()
 
 	if not aimbotEnabled then return end
