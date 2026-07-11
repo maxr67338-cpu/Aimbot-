@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService") -- Für geschmeidige Übergänge
 
 local player = Players.LocalPlayer
 local camera = workspace.CurrentCamera
@@ -11,16 +12,18 @@ end
 local aimbotEnabled = false -- Startet auf false, bis Key korrekt ist
 local espEnabled = false    -- Startet auf false, bis Key korrekt ist
 local keyVerified = false   -- Status für das Key-System
-local correctKey = "Finnistcool332" -- NEUER KEY
+local correctKey = "Finnistcool332"
 
-local maxFOV = 200
+-- AIMBOT EINSTELLUNGEN (Hier kannst du feintunen!)
+local maxFOV = 250         -- Sichtfeld-Radius für den Aimbot
+local aimSmoothing = 0.15   -- Niedriger = Schneller/Härter, Höher = Weicher/Unauffälliger (0.15 ist perfekt)
 
 -- MAIN GUI CONTAINER
 local gui = Instance.new("ScreenGui")
 gui.ResetOnSpawn = false
 gui.Name = "CustomMenuGui"
-gui.DisplayOrder = 999999999 -- Setzt das gesamte GUI über alle anderen im Spiel
-gui.ZIndexBehavior = Enum.ZIndexBehavior.Global -- Aktiviert strikte, globale Ebenen
+gui.DisplayOrder = 999999999
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
 gui.Parent = player:WaitForChild("PlayerGui")
 
 ----------------------------------------------------------------
@@ -30,7 +33,7 @@ local keyFrame = Instance.new("Frame")
 keyFrame.Size = UDim2.new(0, 300, 0, 150)
 keyFrame.Position = UDim2.new(0.5, -150, 0.5, -75)
 keyFrame.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-keyFrame.ZIndex = 100000000 -- Maximaler ZIndex im globalen Raum
+keyFrame.ZIndex = 100000000
 keyFrame.Parent = gui
 
 local keyTitle = Instance.new("TextLabel")
@@ -62,55 +65,52 @@ keySubmit.ZIndex = 100000001
 keySubmit.Parent = keyFrame
 
 ----------------------------------------------------------------
--- CHEAT MENU GUI (Sichtbar nach Key-Eingabe)
+-- CHEAT MENU GUI
 ----------------------------------------------------------------
 local openButton = Instance.new("TextButton")
-openButton.Size = UDim2.new(0,120,0,40)
-openButton.Position = UDim2.new(0,20,0,20)
+openButton.Size = UDim2.new(0, 120, 0, 40)
+openButton.Position = UDim2.new(0, 20, 0, 20)
 openButton.Text = "MENU"
 openButton.ZIndex = 5
-openButton.Visible = false -- Unsichtbar am Anfang
+openButton.Visible = false
 openButton.Parent = gui
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0,220,0,160)
-frame.Position = UDim2.new(0.5,-110,0.5,-80)
-frame.BackgroundColor3 = Color3.fromRGB(30,30,30)
+frame.Size = UDim2.new(0, 220, 0, 160)
+frame.Position = UDim2.new(0.5, -110, 0.5, -80)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.Visible = false
 frame.ZIndex = 4
 frame.Parent = gui
 
 local aimbotBtn = Instance.new("TextButton")
-aimbotBtn.Size = UDim2.new(1,-20,0,40)
-aimbotBtn.Position = UDim2.new(0,10,0,20)
+aimbotBtn.Size = UDim2.new(1, -20, 0, 40)
+aimbotBtn.Position = UDim2.new(0, 10, 0, 20)
 aimbotBtn.Text = "Aimbot OFF"
 aimbotBtn.ZIndex = 5
 aimbotBtn.Parent = frame
 
 local espBtn = Instance.new("TextButton")
-espBtn.Size = UDim2.new(1,-20,0,40)
-espBtn.Position = UDim2.new(0,10,0,80)
+espBtn.Size = UDim2.new(1, -20, 0, 40)
+espBtn.Position = UDim2.new(0, 10, 0, 80)
 espBtn.Text = "ESP OFF"
 espBtn.ZIndex = 5
 espBtn.Parent = frame
 
 ----------------------------------------------------------------
--- KONTROLLEN & AKTIONEN
+-- KONTROLLEN & LOGIK
 ----------------------------------------------------------------
 
--- Key Überprüfung
 keySubmit.MouseButton1Click:Connect(function()
 	if keyInput.Text == correctKey then
 		keyVerified = true
-		keyFrame:Destroy() -- Entfernt das Key-Fenster vollständig
+		keyFrame:Destroy()
 		
-		-- Schaltet die Funktionen ein, sobald der Key stimmt
 		aimbotEnabled = true
 		espEnabled = true
 		aimbotBtn.Text = "Aimbot ON"
 		espBtn.Text = "ESP ON"
 		
-		-- Zeigt den Menü-Button an
 		openButton.Visible = true
 	else
 		keyInput.Text = ""
@@ -157,59 +157,47 @@ local function canSee(targetPart)
 	return true
 end
 
--- TARGET SYSTEM
+-- NEUER & VERBESSERTER TARGET SYSTEM
 local function getBestTarget()
 	local char = getCharacter()
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	if not hrp then return nil end
+	if not char then return nil end
 
-	local screenCenter = Vector2.new(
-		camera.ViewportSize.X / 2,
-		camera.ViewportSize.Y / 2
-	)
-
+	local screenCenter = Vector2.new(camera.ViewportSize.X / 2, camera.ViewportSize.Y / 2)
 	local bestTarget = nil
-	local shortest = math.huge
+	local shortestDistance = math.huge
 
-	for _,v in pairs(Players:GetPlayers()) do
-		
-		if v ~= player
-		and v.Team ~= player.Team
-		and v.Character
-		and v.Character:FindFirstChild("Head") then
+	for _, v in pairs(Players:GetPlayers()) do
+		if v ~= player and v.Team ~= player.Team and v.Character then
+			local tChar = v.Character
+			local head = tChar:FindFirstChild("Head")
+			local humanoid = tChar:FindFirstChild("Humanoid")
 			
-			local head = v.Character.Head
-			
-			local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
-			
-			if onScreen then
-				local dist = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+			-- Prüft, ob der Gegner lebt und einen Kopf hat
+			if head and humanoid and humanoid.Health > 0 then
+				local screenPos, onScreen = camera:WorldToViewportPoint(head.Position)
 				
-				if dist < maxFOV then
-					if canSee(head) then
-						
-						if dist < shortest then
-							shortest = dist
-							bestTarget = v
+				if onScreen then
+					local distToCenter = (Vector2.new(screenPos.X, screenPos.Y) - screenCenter).Magnitude
+					
+					-- Prüft FOV-Radius und ob der Gegner hinter einer Wand steht
+					if distToCenter < maxFOV and canSee(head) then
+						if distToCenter < shortestDistance then
+							shortestDistance = distToCenter
+							bestTarget = head -- Gibt direkt das Zielteil (Kopf) zurück
 						end
-						
 					end
 				end
 			end
-			
 		end
-		
 	end
 
 	return bestTarget
 end
 
--- ESP SYSTEM (mit Health + Name)
+-- ESP SYSTEM
 local function updateESP()
-	for _,v in pairs(Players:GetPlayers()) do
-		
+	for _, v in pairs(Players:GetPlayers()) do
 		if v ~= player and v.Character then
-			
 			local char = v.Character
 			local humanoid = char:FindFirstChild("Humanoid")
 			local head = char:FindFirstChild("Head")
@@ -220,68 +208,55 @@ local function updateESP()
 			local billboard = char:FindFirstChild("ESP_UI")
 			
 			if espEnabled and v.Team ~= player.Team and keyVerified then
-				
-				-- Highlight
 				if not highlight then
 					highlight = Instance.new("Highlight")
 					highlight.Name = "ESP_HIGHLIGHT"
-					highlight.FillColor = Color3.fromRGB(255,0,0)
-					highlight.OutlineColor = Color3.new(1,1,1)
+					highlight.FillColor = Color3.fromRGB(255, 0, 0)
+					highlight.OutlineColor = Color3.new(1, 1, 1)
 					highlight.Parent = char
 				end
 				
-				-- Billboard GUI (Name + Health)
 				if not billboard then
 					billboard = Instance.new("BillboardGui")
 					billboard.Name = "ESP_UI"
-					billboard.Size = UDim2.new(0,100,0,40)
-					billboard.StudsOffset = Vector3.new(0,2.5,0)
+					billboard.Size = UDim2.new(0, 100, 0, 40)
+					billboard.StudsOffset = Vector3.new(0, 2.5, 0)
 					billboard.AlwaysOnTop = true
 					billboard.Parent = head
 					
 					local text = Instance.new("TextLabel")
-					text.Size = UDim2.new(1,0,1,0)
+					text.Size = UDim2.new(1, 0, 1, 0)
 					text.BackgroundTransparency = 1
-					text.TextColor3 = Color3.new(1,1,1)
+					text.TextColor3 = Color3.new(1, 1, 1)
 					text.TextStrokeTransparency = 0
 					text.Parent = billboard
 				end
 				
-				-- Update Text
 				local text = billboard:FindFirstChildOfClass("TextLabel")
 				if text then
 					text.Text = v.Name .. "\nHP: " .. math.floor(humanoid.Health)
 				end
-				
 			else
-				
 				if highlight then highlight:Destroy() end
 				if billboard then billboard:Destroy() end
-				
 			end
-			
 		end
-		
 	end
 end
 
 -- MAIN LOOP
 RunService.RenderStepped:Connect(function()
-	-- Verhindert Berechnungen, solange kein gültiger Key da ist
 	if not keyVerified then return end
 
 	updateESP()
 
 	if not aimbotEnabled then return end
 
-	local target = getBestTarget()
-	
-	if target and target.Character then
-		local head = target.Character:FindFirstChild("Head")
-		
-		if head then
-			camera.CFrame = CFrame.new(camera.CFrame.Position, head.Position)
-		end
+	local targetHead = getBestTarget()
+	if targetHead then
+		-- ERSTKLASSIGE AIMBOT-BERECHNUNG (Interpolation / Smoothing)
+		-- Berechnet die Zielrotation flüssig basierend auf der aktuellen Kameraposition
+		local targetCFrame = CFrame.new(camera.CFrame.Position, targetHead.Position)
+		camera.CFrame = camera.CFrame:Lerp(targetCFrame, aimSmoothing)
 	end
-	
 end)
