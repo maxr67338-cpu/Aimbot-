@@ -11,7 +11,7 @@ end
 local aimbotEnabled = false -- Startet auf false, bis Key korrekt ist
 local espEnabled = false    -- Startet auf false, bis Key korrekt ist
 local keyVerified = false   -- Status für das Key-System
-local correctKey = "Thanksfor300hits"
+local correctKey = "Thanksfor301hits"
 
 -- AIMBOT EINSTELLUNGEN
 local maxFOV = 250         -- Sichtfeld-Radius für den Aimbot
